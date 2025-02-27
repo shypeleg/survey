@@ -38,17 +38,40 @@ export default function Results() {
   useEffect(() => {
     async function fetchData() {
       try {
+        console.log('Fetching results data...');
         const res = await fetch('/api/results');
-        if (!res.ok) {
-          throw new Error('Failed to fetch results');
+        console.log('Response status:', res.status);
+        
+        // Always parse the JSON, even on error status
+        const data = await res.json();
+        console.log('Response data:', data);
+        
+        if (data.error) {
+          // If there's an error message but we have default stats
+          console.error('API returned error but with fallback data:', data.error);
+          setError(data.error);
         }
         
-        const data = await res.json();
-        setResponses(data.responses);
-        setStats(data.stats);
+        // Always use the data if available, even in error cases
+        if (data.stats) {
+          setStats(data.stats);
+        }
+        
+        if (data.responses) {
+          setResponses(data.responses);
+        }
       } catch (err) {
-        console.error(err);
-        setError('Failed to load survey results');
+        console.error('Client-side error fetching results:', err);
+        setError('Failed to load survey results. Please try refreshing the page.');
+        
+        // Set default empty stats
+        setStats({
+          totalResponses: 0,
+          chefRoleCounts: CHEFS.reduce((acc, chef) => ({
+            ...acc,
+            [chef.id]: { ski: 0, cook: 0, kill: 0 }
+          }), {})
+        });
       } finally {
         setLoading(false);
       }

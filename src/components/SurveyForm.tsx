@@ -114,12 +114,15 @@ export default function SurveyForm() {
     setSubmitting(true);
     
     try {
+      console.log('Preparing survey submission...');
+      
       // Convert assignments to required format
       const responses = Object.entries(surveyState.assignments).reduce(
         (acc, [chefId, role]) => ({ ...acc, [chefId]: role }), 
         {}
       );
       
+      console.log('Sending submission to server...');
       const response = await fetch('/api/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -130,11 +133,17 @@ export default function SurveyForm() {
         }),
       });
       
+      console.log('Server response status:', response.status);
+      
+      // Always try to parse the response, even in error cases
+      const data = await response.json();
+      console.log('Server response data:', data);
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to submit survey');
+        throw new Error(data.error || data.details || 'Failed to submit survey');
       }
       
+      console.log('Submission successful!');
       setSubmitted(true);
       setShowConfirmation(false);
       
@@ -144,7 +153,7 @@ export default function SurveyForm() {
       }, 2000);
       
     } catch (err: any) {
-      console.error(err);
+      console.error('Error during submission:', err);
       setError(err.message || 'An error occurred while submitting your response. Please try again.');
       setSubmitting(false);
       setShowConfirmation(false);
