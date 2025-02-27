@@ -6,6 +6,14 @@ set -e
 
 echo "🚀 Starting Chef Survey deployment process..."
 
+# Ensure environment variables are set
+if [ ! -f .env.local ]; then
+  echo "📝 Creating .env.local file with required environment variables..."
+  echo "NEXTAUTH_URL=https://your-app.vercel.app" > .env.local
+  echo "NEXTAUTH_SECRET=$(openssl rand -base64 32)" >> .env.local
+  echo "✅ .env.local file created. Please update NEXTAUTH_URL after deployment."
+fi
+
 # Build the application
 echo "📦 Building the application..."
 npm run build
@@ -13,6 +21,7 @@ npm run build
 # Check if Vercel CLI is installed
 if command -v vercel &> /dev/null; then
   echo "🔄 Deploying to Vercel..."
+  # Pass environment variables to Vercel
   vercel --prod
   echo "✅ Deployment to Vercel complete!"
 else
