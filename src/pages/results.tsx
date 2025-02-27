@@ -15,6 +15,7 @@ import { createCsvFromResponses, downloadCsv, getMostPopularRoleForChef } from '
 import Layout from '@/components/Layout';
 import ChefChartCard from '@/components/ChefChartCard';
 import ResultsTable from '@/components/ResultsTable';
+import CommentSection from '@/components/CommentSection';
 import Link from 'next/link';
 
 // Register Chart.js components
@@ -202,6 +203,9 @@ export default function Results() {
               onExport={handleExport} 
             />
           )}
+          
+          {/* Comment Section */}
+          <CommentSection />
         </>
       )}
     </Layout>

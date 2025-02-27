@@ -1,15 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import fs from 'fs';
-import path from 'path';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from './auth/[...nextauth]';
-import { SurveyResponse, SurveyStats, ChefRole } from '@/utils/types';
-import { CHEFS, ROLES } from '@/utils/constants';
-
-const DATA_FILE = path.join(process.cwd(), 'data', 'responses.json');
+import { SurveyStats, ChefRole } from '@/utils/types';
+import { CHEFS } from '@/utils/constants';
+import dbConnect from '@/lib/mongodb';
+import SurveyResponseModel from '@/models/SurveyResponse';
 
 // Calculate stats from survey responses
-const calculateStats = (responses: SurveyResponse[]): SurveyStats => {
+const calculateStats = (responses: any[]): SurveyStats => {
   const stats: SurveyStats = {
     totalResponses: responses.length,
     chefRoleCounts: {},
@@ -27,7 +25,15 @@ const calculateStats = (responses: SurveyResponse[]): SurveyStats => {
   // Count role assignments for each chef
   responses.forEach(response => {
     CHEFS.forEach(chef => {
-      const role = response.responses[chef.id] as ChefRole;
+      let role;
+      
+      // Handle both Map and object formats (MongoDB returns as object)
+      if (response.responses instanceof Map) {
+        role = response.responses.get(chef.id) as ChefRole;
+      } else if (response.responses && typeof response.responses === 'object') {
+        role = response.responses[chef.id] as ChefRole;
+      }
+      
       if (role) {
         stats.chefRoleCounts[chef.id][role]++;
       }
@@ -47,27 +53,11 @@ export default async function handler(
   }
   
   try {
-    // Check if data file exists
-    if (!fs.existsSync(DATA_FILE)) {
-      return res.status(200).json({ 
-        responses: [],
-        stats: {
-          totalResponses: 0,
-          chefRoleCounts: CHEFS.reduce((acc, chef) => ({
-            ...acc,
-            [chef.id]: {
-              ski: 0,
-              cook: 0,
-              kill: 0,
-            }
-          }), {})
-        }
-      });
-    }
+    // Connect to database
+    await dbConnect();
     
-    // Read responses from file
-    const responseData = fs.readFileSync(DATA_FILE, 'utf8');
-    const responses: SurveyResponse[] = responseData ? JSON.parse(responseData) : [];
+    // Fetch responses from database
+    const responses = await SurveyResponseModel.find({}).lean();
     
     // Calculate statistics
     const stats = calculateStats(responses);
@@ -83,8 +73,22 @@ export default async function handler(
       });
     }
     
+    // Format responses to match expected format in frontend
+    const formattedResponses = responses.map(response => ({
+      id: response._id.toString(),
+      name: response.name,
+      email: response.email,
+      timestamp: response.timestamp,
+      responses: response.responses,
+      createdAt: response.createdAt,
+      updatedAt: response.updatedAt
+    }));
+    
     // Admin access - return complete data including individual responses
-    return res.status(200).json({ responses, stats });
+    return res.status(200).json({ 
+      responses: formattedResponses, 
+      stats 
+    });
   } catch (error) {
     console.error('Error fetching survey results:', error);
     return res.status(500).json({ error: 'Failed to fetch results' });

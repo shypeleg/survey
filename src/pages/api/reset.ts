@@ -1,10 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import fs from 'fs';
-import path from 'path';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from './auth/[...nextauth]';
-
-const DATA_FILE = path.join(process.cwd(), 'data', 'responses.json');
+import dbConnect from '@/lib/mongodb';
+import SurveyResponseModel from '@/models/SurveyResponse';
+import CommentModel from '@/models/Comment';
 
 export default async function handler(
   req: NextApiRequest,
@@ -23,8 +22,14 @@ export default async function handler(
   }
   
   try {
-    // Reset data by writing an empty array to the file
-    fs.writeFileSync(DATA_FILE, JSON.stringify([]));
+    // Connect to database
+    await dbConnect();
+    
+    // Reset data by deleting all responses
+    await SurveyResponseModel.deleteMany({});
+    
+    // Optionally, also reset all comments
+    await CommentModel.deleteMany({});
     
     return res.status(200).json({ 
       success: true, 
