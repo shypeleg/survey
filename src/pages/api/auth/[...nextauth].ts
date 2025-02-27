@@ -27,16 +27,30 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
-        if (!credentials) return null;
-        
-        const { username, password } = credentials;
-        
-        // Simple credential validation
-        if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-          return { id: '1', name: 'Administrator', email: 'admin@example.com' };
+        try {
+          console.log('Auth: Attempting authentication');
+          
+          if (!credentials) {
+            console.log('Auth: No credentials provided');
+            return null;
+          }
+          
+          const { username, password } = credentials;
+          
+          console.log(`Auth: Login attempt with username: ${username}`);
+          
+          // Simple credential validation
+          if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+            console.log('Auth: Login successful');
+            return { id: '1', name: 'Administrator', email: 'admin@example.com' };
+          }
+          
+          console.log('Auth: Invalid credentials');
+          return null;
+        } catch (error) {
+          console.error('Auth: Error in authorize callback:', error);
+          return null;
         }
-        
-        return null;
       }
     })
   ],
@@ -49,18 +63,43 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
+      try {
+        if (user) {
+          console.log('Auth: Adding user to token');
+          token.id = user.id;
+        }
+        return token;
+      } catch (error) {
+        console.error('Auth: Error in jwt callback:', error);
+        return token;
       }
-      return token;
     },
     async session({ session, token }) {
-      if (token && session.user) {
-        session.user.id = token.id as string;
+      try {
+        if (token && session.user) {
+          console.log('Auth: Adding token to session');
+          session.user.id = token.id as string;
+        }
+        return session;
+      } catch (error) {
+        console.error('Auth: Error in session callback:', error);
+        return session;
       }
-      return session;
     },
   },
+  secret: process.env.NEXTAUTH_SECRET || 'chef-survey-secret-key',
+  debug: true,
+  logger: {
+    error(code, metadata) {
+      console.error(`Auth error (${code}):`, metadata);
+    },
+    warn(code) {
+      console.warn(`Auth warning (${code})`);
+    },
+    debug(code, metadata) {
+      console.log(`Auth debug (${code}):`, metadata);
+    }
+  }
 };
 
 export default NextAuth(authOptions);
