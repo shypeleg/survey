@@ -75,13 +75,13 @@ export default async function handler(
     
     // Format responses to match expected format in frontend
     const formattedResponses = responses.map(response => ({
-      id: response._id.toString(),
-      name: response.name,
-      email: response.email,
-      timestamp: response.timestamp,
-      responses: response.responses,
-      createdAt: response.createdAt,
-      updatedAt: response.updatedAt
+      id: (response as any)._id.toString(),
+      name: (response as any).name,
+      email: (response as any).email,
+      timestamp: (response as any).timestamp,
+      responses: (response as any).responses,
+      createdAt: (response as any).createdAt,
+      updatedAt: (response as any).updatedAt
     }));
     
     // Admin access - return complete data including individual responses
