@@ -46,13 +46,6 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
   
-  // Check if user is authenticated
-  const session = await getServerSession(req, res, authOptions);
-  
-  if (!session) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  
   try {
     // Check if data file exists
     if (!fs.existsSync(DATA_FILE)) {
@@ -79,6 +72,18 @@ export default async function handler(
     // Calculate statistics
     const stats = calculateStats(responses);
     
+    // Check if user is authenticated - only return full response data to authenticated users
+    const session = await getServerSession(req, res, authOptions);
+    
+    if (!session) {
+      // Public access - only return stats, not individual responses
+      return res.status(200).json({ 
+        responses: [], // Empty array for privacy
+        stats 
+      });
+    }
+    
+    // Admin access - return complete data including individual responses
     return res.status(200).json({ responses, stats });
   } catch (error) {
     console.error('Error fetching survey results:', error);

@@ -20,9 +20,15 @@ export default function ThankYou() {
               We appreciate your participation in our chef survey!
             </p>
             
-            <Link href="/" className="btn btn-primary">
-              Return to Survey
-            </Link>
+            <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 justify-center">
+              <Link href="/results" className="btn btn-secondary">
+                View Results
+              </Link>
+              
+              <Link href="/" className="btn btn-primary">
+                Return to Survey
+              </Link>
+            </div>
           </div>
         </div>
       </div>

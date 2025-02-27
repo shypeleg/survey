@@ -15,6 +15,7 @@ import { createCsvFromResponses, downloadCsv, getMostPopularRoleForChef } from '
 import Layout from '@/components/Layout';
 import ChefChartCard from '@/components/ChefChartCard';
 import ResultsTable from '@/components/ResultsTable';
+import Link from 'next/link';
 
 // Register Chart.js components
 ChartJS.register(
@@ -27,7 +28,7 @@ ChartJS.register(
 );
 
 export default function Results() {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const [responses, setResponses] = useState<SurveyResponse[]>([]);
   const [stats, setStats] = useState<SurveyStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,65 +36,30 @@ export default function Results() {
 
   useEffect(() => {
     async function fetchData() {
-      if (status === 'authenticated') {
-        try {
-          const res = await fetch('/api/results');
-          if (!res.ok) {
-            throw new Error('Failed to fetch results');
-          }
-          
-          const data = await res.json();
-          setResponses(data.responses);
-          setStats(data.stats);
-        } catch (err) {
-          console.error(err);
-          setError('Failed to load survey results');
-        } finally {
-          setLoading(false);
+      try {
+        const res = await fetch('/api/results');
+        if (!res.ok) {
+          throw new Error('Failed to fetch results');
         }
+        
+        const data = await res.json();
+        setResponses(data.responses);
+        setStats(data.stats);
+      } catch (err) {
+        console.error(err);
+        setError('Failed to load survey results');
+      } finally {
+        setLoading(false);
       }
     }
     
     fetchData();
-  }, [status]);
+  }, []);
 
   const handleExport = () => {
     const csvContent = createCsvFromResponses(responses);
     downloadCsv(csvContent, 'chef-survey-results.csv');
   };
-
-  if (status === 'loading') {
-    return (
-      <Layout title="Loading - Chef Role Survey">
-        <div className="flex items-center justify-center py-12">
-          <div className="text-xl">Loading...</div>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (!session) {
-    return (
-      <Layout title="Results Access - Chef Role Survey">
-        <div className="flex items-center justify-center py-12">
-          <div className="max-w-md w-full space-y-8 text-center">
-            <h1 className="text-3xl font-bold mb-6">Results Access</h1>
-            
-            <div className="card">
-              <p className="mb-6">Please sign in to view survey results</p>
-              
-              <button 
-                onClick={() => signIn()} 
-                className="btn btn-primary"
-              >
-                Sign In
-              </button>
-            </div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
 
   // Generate summary text about most popular roles
   const getMostPopularRoleSummary = () => {
@@ -122,6 +88,11 @@ export default function Results() {
   };
 
   const handleReset = async () => {
+    if (!session) {
+      alert('You need to be logged in as admin to reset data');
+      return;
+    }
+    
     if (!confirm('Are you sure you want to reset all survey data? This action cannot be undone.')) {
       return;
     }
@@ -165,19 +136,35 @@ export default function Results() {
         <h1 className="text-3xl font-bold">Survey Results</h1>
         
         <div className="space-x-4">
-          <button 
-            onClick={handleReset}
-            className="text-red-500 hover:text-red-700 mr-4"
-            disabled={loading}
-          >
-            Reset Data
-          </button>
-          <button 
-            onClick={() => signOut()} 
-            className="text-blue-500 hover:text-blue-700"
-          >
-            Sign Out
-          </button>
+          {session ? (
+            <>
+              <button 
+                onClick={handleReset}
+                className="text-red-500 hover:text-red-700 mr-4"
+                disabled={loading}
+              >
+                Reset Data
+              </button>
+              <button 
+                onClick={() => signOut()} 
+                className="text-blue-500 hover:text-blue-700"
+              >
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/" className="text-blue-500 hover:text-blue-700 mr-4">
+                Back to Survey
+              </Link>
+              <button 
+                onClick={() => signIn()} 
+                className="text-gray-500 hover:text-gray-700"
+              >
+                Admin Login
+              </button>
+            </>
+          )}
         </div>
       </header>
       
@@ -209,10 +196,12 @@ export default function Results() {
             ))}
           </div>
           
-          <ResultsTable 
-            responses={responses} 
-            onExport={handleExport} 
-          />
+          {session && (
+            <ResultsTable 
+              responses={responses} 
+              onExport={handleExport} 
+            />
+          )}
         </>
       )}
     </Layout>
